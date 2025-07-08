@@ -1,31 +1,29 @@
-PROMPT_TEMPLATE = """
-You are a venture capital analyst. Given the pitch deck content below, extract important information about a Start-up:
+CLASSIFY_PROMPT = """
+Classify this deal as either "strong" or "weak".
 
-- Financial planning quality
-- Market opportunity
-- Team quality
-
-Format the response in markdown table. I need to see the features intuitively.
-Pitch deck:
+Pitch Deck Content:
 {text}
+IMPORTANT
+Answer with only: strong or weak.
 """
+
 EXTRACTION_PROMPT = """
-You are a venture capital analyst. Extract the following information from the startup pitch deck below:
+You are a venture capital analyst. Read the following pitch deck text and extract 5 signals in structured JSON:
 
-1. Market size and scalability potential
-2. Founder and team background
-3. Competitive positioning
-4. Business model and monetization approach
-5. Exit strategy or path to profitability
+- market_potential: Estimate of market size and scalability
+- team_experience: Backgrounds and strengths of the team
+- competitive_positioning: Differentiation from competitors
+- business_model: How they make money
+- exit_strategy: Potential for acquisition or IPO
 
-Pitch deck:
+Pitch Deck:
 {text}
 
-Respond in JSON format like this:
+Respond in the following format with key metrics:
 {{
   "market_potential": "...",
   "team_experience": "...",
-  "competition": "...",
+  "competitive_positioning": "...",
   "business_model": "...",
   "exit_strategy": "..."
 }}

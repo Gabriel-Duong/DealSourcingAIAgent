@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DealSourcingAIAgent</title>
+    <style>
+        body { font-family: sans-serif; padding: 2em; max-width: 1000px; margin: auto; }
+        table { border-collapse: collapse; width: 100%; margin-top: 2em; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        th { background: #f0f0f0; }
+        .upload-section { margin-bottom: 2em; }
+    </style>
+</head>
+<body>
+    <h1>Startup Pitch Deck Analyzer</h1>
+    
+    <div class="upload-section">
+        <form action="/analyze" enctype="multipart/form-data" method="post">
+            <input type="file" name="file" accept=".pdf" required>
+            <button type="submit">Analyze Deck</button>
+        </form>
+    </div>
+
+    {% if results %}
+    <div>
+        <a href="/download"><button>📥 Download Results (CSV)</button></a>
+        <table>
+            <thead>
+                <tr>
+                    <th>Filename</th>
+                    <th>Classification</th>
+                    <th>Market Potential</th>
+                    <th>Team Experience</th>
+                    <th>Competitive Positioning</th>
+                    <th>Business Model</th>
+                    <th>Exit Strategy</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in results %}
+                <tr>
+                    <td>{{ r.filename }}</td>
+                    <td>{{ r.classification }}</td>
+                    <td>{{ r.signals.market_potential }}</td>
+                    <td>{{ r.signals.team_experience }}</td>
+                    <td>{{ r.signals.competitive_positioning }}</td>
+                    <td>{{ r.signals.business_model }}</td>
+                    <td>{{ r.signals.exit_strategy }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</body>
+</html>

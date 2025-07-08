@@ -11,6 +11,8 @@ filelock==3.18.0
 gdown==5.2.0
 h11==0.16.0
 idna==3.10
+Jinja2==3.1.6
+MarkupSafe==3.0.2
 pdfminer.six==20250506
 pdfplumber==0.11.7
 pillow==11.3.0

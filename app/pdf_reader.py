@@ -1,9 +1,5 @@
 import pdfplumber
 
-def extract_text_from_pdf(filepath):
-    text = ""
-    with pdfplumber.open(filepath) as pdf:
-        for page in pdf.pages:
-            if page.extract_text():
-                text += page.extract_text() + "\n"
-    return text
+def extract_text_from_pdf(path: str) -> str:
+    with pdfplumber.open(path) as pdf:
+        return "\n".join(page.extract_text() or "" for page in pdf.pages)

@@ -1,42 +1,71 @@
-from fastapi import FastAPI, UploadFile, File
-from app.pdf_reader import extract_text_from_pdf
-from app.classifier import classify_pitch
-from app.classifier import extract_signals
+from fastapi import FastAPI, UploadFile, File, Request
+from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.templating import Jinja2Templates
 import os
+import shutil
+import csv
+import io
+
+from app.pdf_reader import extract_text_from_pdf
+from app.classifier import classify_pitch, extract_signals
 
 app = FastAPI()
+templates = Jinja2Templates(directory="templates")
 
 UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-@app.get("/")
-def read_root():
-    return {"message": "Welcome to the Deal Classifier AI!"}
+# In-memory result store
+analyzed_results = []
 
-@app.post("/classify")
-async def classify(file: UploadFile = File(...)):
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
+@app.get("/", response_class=HTMLResponse)
+async def read_root(request: Request):
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "results": analyzed_results
+    })
+
+@app.post("/analyze", response_class=HTMLResponse)
+async def analyze(request: Request, file: UploadFile = File(...)):
     filepath = os.path.join(UPLOAD_DIR, file.filename)
-
     with open(filepath, "wb") as f:
-        f.write(await file.read())
+        shutil.copyfileobj(file.file, f)
 
     text = extract_text_from_pdf(filepath)
-    result = classify_pitch(text)
+    classification = classify_pitch(text)
+    signals = extract_signals(text)
 
-    return {"deal_strength": result}
+    entry = {
+        "filename": file.filename,
+        "classification": classification,
+        "signals": signals
+    }
+    analyzed_results.append(entry)
 
-@app.post("/extract-signals")
-async def extract(file: UploadFile = File(...)):
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
-    filepath = os.path.join(UPLOAD_DIR, file.filename)
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "results": analyzed_results
+    })
 
-    with open(filepath, "wb") as f:
-        f.write(await file.read())
+@app.get("/download")
+def download_csv():
+    headers = [
+        "filename", "classification", 
+        "market_potential", "team_experience", 
+        "competitive_positioning", "business_model", "exit_strategy"
+    ]
 
-    text = extract_text_from_pdf(filepath)
-    result = extract_signals(text)
+    csv_stream = io.StringIO()
+    writer = csv.DictWriter(csv_stream, fieldnames=headers)
+    writer.writeheader()
 
-    return result
+    for item in analyzed_results:
+        row = {
+            "filename": item["filename"],
+            "classification": item["classification"],
+            **item["signals"]
+        }
+        writer.writerow(row)
 
-
-
+    csv_stream.seek(0)
+    return StreamingResponse(csv_stream, media_type="text/csv", headers={"Content-Disposition": "attachment; filename=results.csv"})

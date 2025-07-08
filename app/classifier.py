@@ -1,40 +1,49 @@
-import requests
-from app.prompts import PROMPT_TEMPLATE
-from app.prompts import EXTRACTION_PROMPT
+import subprocess
+import json
+from app.prompts import CLASSIFY_PROMPT, EXTRACTION_PROMPT
 
-OLLAMA_API_URL = "http://localhost:11434/api/generate"
+def call_llm(prompt: str) -> str:
+    command = ["ollama", "run", "mistral", prompt]
+    result = subprocess.run(command, capture_output=True, text=True)
+    return result.stdout.strip()
 
-def classify_pitch(text):
-    prompt = PROMPT_TEMPLATE.format(text=text[:4000])  # truncate if too long
+# def normalize_classification(raw: str) -> str:
+#     """
+#     Ensures that LLM responses are mapped to either 'strong' or 'weak'.
+#     If ambiguous, return 'unknown'.
+#     """
+#     raw = raw.lower().strip()
+#     if "strong" in raw:
+#         return "strong"
+#     elif "weak" in raw:
+#         return "weak"
+#     else:
+#         return "unknown"
 
-    payload = {
-        "model": "mistral",
-        "prompt": prompt,
-        "stream": False
-    }
+def classify_pitch(text: str) -> str:
+    """
+    Classifies pitch deck as either 'strong' or 'weak'.
+    """
+    prompt = CLASSIFY_PROMPT.format(text=text[:4000])
+    raw = call_llm(prompt)
+    # return normalize_classification(raw)
+    return raw
 
-    response = requests.post(OLLAMA_API_URL, json=payload)
-    output = response.json()["response"].strip().lower()
+def extract_signals(text: str) -> dict:
+    """
+    Extracts key business signals using a structured JSON prompt.
+    Returns a dictionary with fallback defaults if parsing fails.
+    """
+    prompt = EXTRACTION_PROMPT.format(text=text[:4000])
+    response = call_llm(prompt)
 
-    return output  # expected: "strong" or "weak"
-
-def extract_signals(text):
-    prompt = EXTRACTION_PROMPT.format(text=text[:4000])  # adjust size if needed
-
-    payload = {
-        "model": "mistral",
-        "prompt": prompt,
-        "stream": False
-    }
-
-    response = requests.post("http://localhost:11434/api/generate", json=payload)
-    content = response.json()["response"]
-
-    # Optional: safely parse JSON-like string
-    import json
     try:
-        extracted = json.loads(content)
-    except json.JSONDecodeError:
-        extracted = {"error": "LLM did not return valid JSON", "raw_response": content}
-
-    return extracted
+        return json.loads(response)
+    except Exception:
+        return {
+            "market_potential": "N/A",
+            "team_experience": "N/A",
+            "competitive_positioning": "N/A",
+            "business_model": "N/A",
+            "exit_strategy": "N/A"
+        }
