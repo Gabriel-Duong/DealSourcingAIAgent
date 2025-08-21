@@ -1,10 +1,14 @@
 CLASSIFY_PROMPT = """
-Classify this deal as either "strong" or "weak".
+You are an experienced venture capital analyst.
 
-Pitch Deck Content:
+Given the text of a pitch deck, your task is to classify the startup as either:
+- "strong" — if the company has high potential for scale, solid team, good market fit, and clear monetization strategy
+- "weak" — if the company lacks these fundamentals or the content is irrelevant
+
+Only respond with one word: "strong" or "weak". Do not explain. Be strict.
+
+Pitch deck content:
 {text}
-IMPORTANT
-Answer with only: strong or weak.
 """
 
 EXTRACTION_PROMPT = """

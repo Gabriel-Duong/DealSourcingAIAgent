@@ -1,1 +1,30 @@
+# Ignore Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore environment files
+.env
+*.env
+
+# Ignore OS-generated files
+.DS_Store
+Thumbs.db
+
+# Ignore virtual environments
 venv/
+.venv/
+env/
+ENV/
+
+# Ignore Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# Ignore logs
+*.log
+
+# Ignore compiled distributions
+build/
+dist/
+*.egg-info/
