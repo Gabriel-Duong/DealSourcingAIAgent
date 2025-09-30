@@ -2,7 +2,7 @@
 import os
 import requests
 
-DECILE_API_URL = "https://www.decilehub.com/api/v1"
+DECILE_API_URL = "https://expara.decilehub.com/api/v1"
 DECILE_TOKEN = "4ZW8M6LEvTQ8peVqFU9StLdo"
 OLLAMA_URL = "http://localhost:11434/api/generate" # default Ollama server
 
@@ -17,7 +17,7 @@ def summarize_with_ollama(data: dict, model="gemma3:12b"):
     Summarize this company for an investment analyst:
     Name: {data.get('name')}
     Country: {data.get('country')}
-    Description: {data.get('short_description')}
+    Description: {data.get('what_is_your_idea_venture')}
     Notes: {data.get('notes')}
     """
     resp = requests.post(
