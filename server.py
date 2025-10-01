@@ -30,10 +30,19 @@ class Query(BaseModel):
 
 @app.post("/ask")
 def ask(query: Query):
-    """RAG endpoint for advisory chatbot"""
-    answer = qa.invoke(query.question)
+    raw = qa.invoke(query.question)
+
+    # normalize to a plain string for frontends
+    if isinstance(raw, dict):
+        # common keys: "result", "answer", "text"
+        answer_text = raw.get("result") or raw.get("answer") or raw.get("text") or str(raw)
+    else:
+        answer_text = str(raw)
+
     return {
         "model": CHAT_MODEL,
         "embedding_model": EMBED_MODEL,
-        "answer": answer
+        "answer_text": answer_text,
+        "raw": raw  # keep for debugging if needed
     }
+
