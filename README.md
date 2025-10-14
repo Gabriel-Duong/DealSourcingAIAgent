@@ -75,6 +75,11 @@ Or directly:
 ```bash
 uvicorn server:app --host 0.0.0.0 --port 8000 --reload
 ```
+Then run OpenWebUI
+```bash
+open-webui serve
+```
+This will start the Open WebUI server, which you can access at http://localhost:8080
 
 # Quick tests
 
