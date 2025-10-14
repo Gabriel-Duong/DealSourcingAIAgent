@@ -1,138 +1,140 @@
-# DealSourcingAIAgent
+Project overview and run instructions below.
 
-## Overview
+# Project overview
 
-**DealSourcingAIAgent** is a local-first AI assistant designed for venture capital analysts to streamline the triage process of evaluating startup pitch decks. This tool automates classification and information extraction tasks using local LLMs, enabling analysts to prioritize high-quality deals with more efficiency and consistency. All computation is done on-device, preserving confidentiality and eliminating API costs.
+* Purpose: Local RAG advisory chatbot using Ollama (local LLMs) + Chroma vectors.
+* Components:
 
----
+  * `data/` — source docs (PDF, TXT).
+  * `ingest.py` — builds embeddings with `nomic-embed-text` and writes `chroma_db/`.
+  * `chroma_db/` — persistent vector DB.
+  * `server.py` — FastAPI RAG server (uses `nomic-embed-text` for embeddings and `gemma3:12b` for chat). Returns `{"model","embedding_model","answer"}`.
+  * `run.py` — helper that launches uvicorn.
+  * `requirements.txt` — Python deps.
+  * (Optional) Open WebUI — chat frontend calling `server.py` `/ask` endpoint.
 
-## Architecture & Technology
+# Minimal `requirements.txt` (recommended)
 
-* **Language & Framework**: Python 3.13 with [FastAPI](https://fastapi.tiangolo.com/) for building RESTful APIs.
-* **LLM Engine**: [Mistral 7B](https://ollama.com/library/mistral) served locally via [Ollama](https://ollama.com).
-* **Document Parsing**: [`pdfplumber`](https://github.com/jsvine/pdfplumber) for extracting text from PDF pitch decks.
-* **Prompting Strategy**: Custom-engineered zero-shot prompts for classification and signal extraction.
-* **Environment**: Python `venv` for virtual environment isolation.
-* **Tools**: VSCode for development, GitHub for version control, Swagger UI for API testing.
-
----
-
-## Workflow
-
-```text
-1. Upload PDF via API
-   ↓
-2. Extract text using pdfplumber
-   ↓
-3. Choose endpoint:
-   - /classify → returns "strong" or "weak"
-   - /extract-signals → returns structured business insights
-   ↓
-4. Return JSON response to the user (via Swagger UI or future UI)
+```
+fastapi
+uvicorn[standard]
+langchain-ollama
+langchain-chroma
+chromadb
+pydantic
+python-multipart
 ```
 
----
+Adjust versions if you need reproducibility.
 
-## Current Functionality
+# Pre-requisites
 
-* Accepts `.pdf` pitch decks through an API endpoint.
-* Extracts raw text using `pdfplumber`.
-* Sends text to a local instance of Mistral 7B for:
-
-  * Binary classification of deal quality.
-  * Extraction of 5 core VC-relevant signals:
-
-    * Market Potential
-    * Team/Founder Experience
-    * Competitive Positioning
-    * Business Model
-    * Exit Strategy
-* Returns structured JSON results.
-
----
-
-## Project Structure
+1. Python 3.11+ and a virtualenv.
+2. Ollama installed and running locally.
+3. Open WebUI installed (if you plan to use it).
+4. Pull required Ollama models:
 
 ```bash
-DealSourcingAIAgent/
-├── app/
-│   ├── main.py            # FastAPI route definitions
-│   ├── classifier.py      # Core logic to interact with LLM via Ollama
-│   ├── prompts.py         # Prompt templates for classification/extraction
-│   └── utils.py           # PDF parsing and helper functions
-├── uploads/               # Temporary storage for uploaded pitch decks
-├── venv/                  # Virtual Python environment
-├── requirements.txt       # Dependencies for pip installation
-└── README.md              # Project documentation (this file)
+ollama pull nomic-embed-text:latest
+ollama pull gemma3:12b
+# optional other chat models:
+# ollama pull mistral:latest
 ```
 
----
-
-## Future Directions
-
-### 1. Frontend Integration
-
-Replace Swagger UI with a lightweight HTML/Jinja2 interface or a full SPA using React or Svelte. The frontend will support:
-
-* File uploads
-* Display of extracted signals
-* Manual annotations and decision logging
-
-### 2. Intelligent Scoring & Prioritization
-
-Enhance the LLM prompt to return not just descriptions but numerical scores (e.g., 1–5) for each startup signal. This allows the backend to auto-rank and cluster promising deals.
-
-### 3. Persistence Layer
-
-Add data persistence using SQLite or integrations with Notion, Airtable, or Google Sheets. Enable long-term tracking and collaborative review across analyst teams.
-
-### 4. Security & Collaboration
-
-Introduce user authentication and Dockerization for secure deployment across internal teams. Enable multi-user access with permission levels.
-
-### 5. Human Feedback Loop
-
-Incorporate a feedback system where human corrections are logged and used to refine prompt strategies or even fine-tune future model iterations.
-
----
-
-## Getting Started
-
-### Prerequisites
-
-* macOS with M1/M2 chip or equivalent
-* Python 3.13
-* [Ollama installed](https://ollama.com/)
-
-### Installation
+# Setup — one time
 
 ```bash
-# Clone repo and create environment
-git clone https://github.com/yourusername/DealSourcingAIAgent.git
-cd DealSourcingAIAgent
-python3 -m venv venv
-source venv/bin/activate
+# create virtualenv (if not already)
+python -m venv .venv
+source .venv/bin/activate
 
-# Install dependencies
+# install python deps
 pip install -r requirements.txt
-
-# Start Ollama with Mistral model
-ollama run mistral
-
-# Run FastAPI server
-uvicorn app.main:app --reload
 ```
 
-Visit [http://localhost:8000/docs](http://localhost:8000/docs) to access Swagger UI.
+# Build vector DB (run every time you add/modify /data)
 
----
+```bash
+python ingest.py
+# ingest.py should:
+# - read files in ./data
+# - create embeddings with model "nomic-embed-text:latest"
+# - write persistent Chroma DB to ./chroma_db
+```
 
-## License
+# Start server
 
-This project is developed for internal research and prototyping purposes. License and usage restrictions to be determined.
+Preferred (uses run.py):
 
----
+```bash
+python run.py
+```
 
-## Author
+Or directly:
 
-Gabriel Duong 
+```bash
+uvicorn server:app --host 0.0.0.0 --port 8000 --reload
+```
+
+# Quick tests
+
+* Swagger UI: open `http://localhost:8000/docs` and try `/ask`.
+* Curl:
+
+```bash
+curl -s -X POST "http://localhost:8000/ask" \
+  -H "Content-Type: application/json" \
+  -d '{"question":"Summarize the fundraising process in my documents"}' | jq
+```
+
+Look for `"model"` and `"embedding_model"` fields and check `answer` text is grounded in your docs.
+
+# Connect to Open WebUI
+
+1. In Open WebUI → Settings → External Tools → Add Connection:
+
+   * Type: `OpenAPI`
+   * URL/Base URL: `http://localhost:8000`
+   * OpenAPI Spec: `openapi.json`
+   * Auth: `None`
+2. In Open WebUI → Settings → Tools → Add Custom Tool (if needed):
+
+   * Name: `RAG Advisory`
+   * Method: `POST`
+   * URL: `http://localhost:8000/ask`
+   * Body template:
+
+```json
+{"question":"{{input}}"}
+```
+
+* Response mapping:
+
+```
+{{response.answer}}
+```
+
+3. Test in WebUI. If answers differ from Swagger, check WebUI tool response mapping and LLM system prompt settings.
+
+# Important behaviors & troubleshooting
+
+* Adding a file to `data/` does **not** auto-update embeddings. Run `python ingest.py` then restart server (or implement a `/reload` endpoint).
+* If answers are generic:
+
+  * Confirm `chroma_db/` is non-empty.
+  * Confirm `ingest.py` used `nomic-embed-text`.
+  * Confirm `server.py` uses the same `chroma_db` path and same embeddings class.
+* Common errors:
+
+  * `this model does not support embeddings` → embedding model wrong. Use `nomic-embed-text`.
+  * Deprecation warnings → use `langchain-ollama` and `langchain-chroma` imports we discussed. They are warnings, not fatal.
+  * Ollama not running or model not pulled → start Ollama and `ollama pull` the models.
+* Debugging tips:
+
+  * Compare direct LLM output vs RAG output to confirm grounding:
+
+    ```python
+    print("LLM only:", llm.invoke("What is inside my docs?"))
+    print("RAG:", qa.invoke("What is inside my docs?"))
+    ```
+  * Use `--reload` when developing for automatic Python reloads.

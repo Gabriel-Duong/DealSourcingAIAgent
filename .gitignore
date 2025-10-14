@@ -1,1 +1,56 @@
+# Byte-compiled / caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
 venv/
+env/
+ENV/
+
+# Packaging / build
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Chroma vector DB and persisted vectors
+chroma_db/
+*.chromadb/
+
+# Local data (docs, uploads)
+data/
+
+# Ollama / local model artifacts (optional)
+.ollama/
+models/
+
+# IDEs / editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# macOS
+.DS_Store
+
+# Logs
+logs/
+*.log
+
+# Secrets / env
+.env
+.env.*
+secrets.json
+credentials.json
+*.pem
+*.key
+
+# Testing / notebooks
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Databases
+*.sqlite3
+*.db
