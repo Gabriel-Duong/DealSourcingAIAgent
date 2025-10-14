@@ -6,3 +6,4 @@ chromadb
 pypdf
 fastapi 
 uvicorn
+jq
