@@ -1,48 +1,31 @@
+# server.py
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from langchain.chains import RetrievalQA
+from pathlib import Path
+import time
+
 from langchain_ollama import OllamaLLM, OllamaEmbeddings
 from langchain_chroma import Chroma
+from langchain.chains import RetrievalQA
 
-# --- Define models explicitly ---
-EMBED_MODEL = "nomic-embed-text:latest"   # embeddings only
-CHAT_MODEL = "gemma3:12b"                 # LLM for answers
+PERSIST_DIR = str(Path(__file__).parent / "chroma_db")
 
-# --- Load vector DB ---
-embeddings = OllamaEmbeddings(model=EMBED_MODEL)
-db = Chroma(persist_directory="chroma_db", embedding_function=embeddings)
-retriever = db.as_retriever()
+app = FastAPI()
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-# --- Set up chat LLM ---
-llm = OllamaLLM(model=CHAT_MODEL)
-
-qa = RetrievalQA.from_chain_type(
-    llm=llm,
-    retriever=retriever,
-    chain_type="stuff"
-)
-
-# --- FastAPI app ---
-app = FastAPI(title="RAG Advisory Bot", version="0.1.0")
-
-class Query(BaseModel):
+class Question(BaseModel):
     question: str
 
+# --- load once, same as app.py ---
+emb = OllamaEmbeddings(model="nomic-embed-text")
+db  = Chroma(persist_directory=PERSIST_DIR, embedding_function=emb)
+retriever = db.as_retriever(search_kwargs={"k":4})
+llm = OllamaLLM(model="gemma3:12b")
+qa  = RetrievalQA.from_chain_type(llm=llm, retriever=retriever, chain_type="stuff")
+
 @app.post("/ask")
-def ask(query: Query):
-    raw = qa.invoke(query.question)
-
-    # normalize to a plain string for frontends
-    if isinstance(raw, dict):
-        # common keys: "result", "answer", "text"
-        answer_text = raw.get("result") or raw.get("answer") or raw.get("text") or str(raw)
-    else:
-        answer_text = str(raw)
-
-    return {
-        "model": CHAT_MODEL,
-        "embedding_model": EMBED_MODEL,
-        "answer_text": answer_text,
-        "raw": raw  # keep for debugging if needed
-    }
-
+def ask(payload: Question):
+    t0 = time.time()
+    res = qa.invoke(payload.question)
+    return {"answer": res["result"], "latency": round(time.time()-t0, 3)}
